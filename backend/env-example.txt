@@ -1,0 +1,27 @@
+# MongoDB Configuration (Local)
+MONGODB_URI=mongodb://localhost:27017/hospitality-platform
+MONGODB_TEST_URI=mongodb://localhost:27017/hospitality-platform-test
+
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+
+# JWT Configuration
+JWT_SECRET=your-super-secret-jwt-key-change-in-production
+JWT_EXPIRE=7d
+
+# CORS Configuration
+FRONTEND_URL=http://localhost:5173
+
+# WebSocket Configuration (Not needed - using same server)
+WEBSOCKET_PORT=5001
+
+# Geospatial Configuration
+MAX_SEARCH_RADIUS_KM=50
+DEFAULT_SEARCH_RADIUS_KM=10
+
+# Review Gamification
+BASE_POINTS_PER_REVIEW=10
+POINTS_PER_100_CHARS=5
+KEYWORD_BONUS_POINTS=3
+MEDIA_UPLOAD_BONUS=15
