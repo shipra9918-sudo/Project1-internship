@@ -1,0 +1,33 @@
+{
+  "name": "hospitality-platform-frontend",
+  "version": "1.0.0",
+  "description": "Multi-vertical hospitality platform frontend",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src --ext js,jsx"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.15.0",
+    "socket.io-client": "^4.7.2",
+    "axios": "^1.5.0",
+    "leaflet": "^1.9.4",
+    "react-leaflet": "^4.2.1",
+    "zustand": "^4.4.1",
+    "react-hot-toast": "^2.4.1",
+    "lucide-react": "^0.279.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.0.4",
+    "vite": "^4.4.9",
+    "tailwindcss": "^3.3.3",
+    "autoprefixer": "^10.4.15",
+    "postcss": "^8.4.29",
+    "eslint": "^8.48.0",
+    "eslint-plugin-react": "^7.33.2"
+  }
+}
