@@ -19,6 +19,8 @@ const CheckoutPage = () => {
     }
   });
 
+
+  
   const handleCheckout = async (e) => {
     e.preventDefault();
     setLoading(true);

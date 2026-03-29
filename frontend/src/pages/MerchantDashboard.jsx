@@ -19,6 +19,8 @@ const MerchantDashboard = () => {
     fetchDashboardData();
   }, []);
 
+
+  
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
