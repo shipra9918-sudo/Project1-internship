@@ -314,6 +314,14 @@ const PricingPage = () => {
                 Absolutely. You can cancel your subscription at any time with no penalties.
               </p>
             </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-2">
+                Is there any processing fee?
+              </h3>
+              <p className="text-gray-600 text-sm">
+                No, there are no additional processing fees. You will only be charged the subscription price.
+              </p>
+            </div>
           </div>
         </div>
 
