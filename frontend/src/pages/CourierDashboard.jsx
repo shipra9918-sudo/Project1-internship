@@ -53,7 +53,7 @@ const CourierDashboard = () => {
       console.error('Error toggling availability:', error);
     }
   };
-
+ 
   const acceptDelivery = async (orderId) => {
     try {
       await api.put(`/orders/${orderId}/accept-delivery`);
@@ -62,6 +62,7 @@ const CourierDashboard = () => {
       console.error('Error accepting delivery:', error);
     }
   };
+ 
 
   const completeDelivery = async (orderId) => {
     try {
