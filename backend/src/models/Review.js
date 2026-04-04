@@ -133,18 +133,22 @@ reviewSchema.pre('save', function(next) {
   next();
 });
 
-// Extract keywords using NLP
+// Extract keywords using whole-word boundary matching to prevent false positives
+// e.g. 'fast' must not match inside 'breakfast', 'cold' must not match inside 'scold'
 reviewSchema.methods.extractKeywords = function() {
   const text = this.reviewText.toLowerCase();
-  
-  // Simple keyword extraction (in production, use NLP library)
+
   const foodKeywords = ['delicious', 'tasty', 'fresh', 'hot', 'cold', 'spicy', 'sweet', 'crispy', 'tender', 'flavorful'];
   const serviceKeywords = ['fast', 'slow', 'friendly', 'rude', 'professional', 'helpful', 'quick', 'late'];
   const qualityKeywords = ['excellent', 'good', 'bad', 'poor', 'amazing', 'terrible', 'average', 'outstanding'];
-  
+
   const allKeywords = [...foodKeywords, ...serviceKeywords, ...qualityKeywords];
-  const found = allKeywords.filter(keyword => text.includes(keyword));
-  
+
+  // Use \b word-boundary anchors so 'fast' won't fire on 'breakfast'
+  const found = allKeywords.filter(keyword =>
+    new RegExp(`\\b${keyword}\\b`).test(text)
+  );
+
   this.keywords = [...new Set([...this.keywords, ...found])];
   return this.keywords;
 };

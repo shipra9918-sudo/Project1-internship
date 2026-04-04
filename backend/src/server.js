@@ -1,13 +1,18 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const dotenv = require('dotenv');
 const http = require('http');
 const socketIO = require('socket.io');
+const compression = require('compression');
+const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
 
 // Load environment variables
 dotenv.config();
+
+// Import DB connection (also calls ensureIndexes after connect)
+const connectDB = require('./config/database');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -15,6 +20,7 @@ const restaurantRoutes = require('./routes/restaurantRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
+const chatbotRoutes = require('./routes/chatbotRoutes');
 
 // SaaS routes
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
@@ -29,6 +35,7 @@ const wsService = require('./services/websocket');
 // Initialize Express app
 const app = express();
 const server = http.createServer(app);
+app.disable('x-powered-by');
 
 // Initialize WebSocket
 const io = socketIO(server, {
@@ -38,31 +45,42 @@ const io = socketIO(server, {
     credentials: true
   }
 });
+global.io = io;
 
 // Initialize WebSocket service
 wsService.initializeWebSocket(io);
 
 // Middleware
-app.use(helmet());
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
+app.use(compression());
+if (process.env.NODE_ENV !== 'test') {
+  app.use(morgan('dev'));
+}
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 250,
+  standardHeaders: true,
+  legacyHeaders: false
+}));
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => {
-  console.log('✅ MongoDB Connected');
-})
-.catch((error) => {
-  console.error('❌ MongoDB Connection Error:', error.message);
-  process.exit(1);
-});
+// MongoDB Connection (uses connectDB which also ensures geospatial indexes)
+connectDB();
 
 // Health check route
 app.get('/health', (req, res) => {
@@ -79,6 +97,7 @@ app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 
 // SaaS Routes
 app.use('/api/subscriptions', subscriptionRoutes);

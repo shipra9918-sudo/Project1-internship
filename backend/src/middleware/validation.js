@@ -6,8 +6,9 @@ exports.validate = (req, res, next) => {
   if (!errors.isEmpty()) {
     return res.status(400).json({
       success: false,
+      // express-validator v7 renamed `param` to `path`
       errors: errors.array().map(err => ({
-        field: err.param,
+        field: err.path ?? err.param,
         message: err.msg
       }))
     });

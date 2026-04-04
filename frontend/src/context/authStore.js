@@ -9,14 +9,20 @@ export const useAuthStore = create((set, get) => ({
   loading: false,
   error: null,
 
+  clearSession: () => {
+    localStorage.removeItem('token');
+    websocketService.disconnect();
+    set({ user: null, token: null, isAuthenticated: false });
+  },
+
   login: async (credentials) => {
     set({ loading: true, error: null });
     try {
       const response = await authAPI.login(credentials);
       const { user, token } = response.data.data;
-      
+
       localStorage.setItem('token', token);
-      set({ user, token, isAuthenticated: true, loading: false });
+      set({ user, token, isAuthenticated: true, loading: false, error: null });
       
       // Connect WebSocket
       websocketService.connect(token);
@@ -34,9 +40,9 @@ export const useAuthStore = create((set, get) => ({
     try {
       const response = await authAPI.register(userData);
       const { user, token } = response.data.data;
-      
+
       localStorage.setItem('token', token);
-      set({ user, token, isAuthenticated: true, loading: false });
+      set({ user, token, isAuthenticated: true, loading: false, error: null });
       
       websocketService.connect(token);
       
@@ -48,10 +54,13 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  logout: () => {
-    localStorage.removeItem('token');
-    websocketService.disconnect();
-    set({ user: null, token: null, isAuthenticated: false });
+  logout: async () => {
+    try {
+      await authAPI.logout();
+    } catch {
+      // still clear local session
+    }
+    get().clearSession();
   },
 
   loadUser: async () => {
@@ -69,8 +78,8 @@ export const useAuthStore = create((set, get) => ({
       
       websocketService.connect(token);
     } catch (error) {
-      localStorage.removeItem('token');
-      set({ user: null, token: null, isAuthenticated: false, loading: false });
+      get().clearSession();
+      set({ loading: false });
     }
   },
 

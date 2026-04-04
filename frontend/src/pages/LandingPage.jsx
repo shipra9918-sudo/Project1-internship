@@ -1,9 +1,6 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Zap, 
-  Shield, 
-  TrendingUp, 
   Users, 
   Check, 
   ArrowRight,
@@ -11,13 +8,11 @@ import {
   MapPin,
   CreditCard,
   BarChart3,
-  Smartphone,
-  Globe
+  Smartphone
 } from 'lucide-react';
 
 const LandingPage = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
 
   const handleGetStarted = () => {
     navigate('/register');

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../context/authStore';
+import { getPostAuthPath } from '../utils/authRedirect';
 import toast from 'react-hot-toast';
 
 const LoginPage = () => {
@@ -10,6 +11,8 @@ const LoginPage = () => {
   });
   const { login, loading } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,7 +20,8 @@ const LoginPage = () => {
     
     if (result.success) {
       toast.success('Login successful!');
-      navigate('/home');
+      const user = useAuthStore.getState().user;
+      navigate(getPostAuthPath(user, from));
     } else {
       toast.error(result.error || 'Login failed');
     }

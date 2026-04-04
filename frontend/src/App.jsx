@@ -1,12 +1,20 @@
-import { Suspense, lazy, useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { router } from './routes/routes';
 import { useAuthStore } from './context/authStore';
+import { setUnauthorizedHandler } from './services/api';
 import LoadingSpinner from './components/shared/LoadingSpinner';
 
 function App() {
   const loadUser = useAuthStore(state => state.loadUser);
+  const clearSession = useAuthStore(state => state.clearSession);
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      clearSession();
+    });
+  }, [clearSession]);
 
   useEffect(() => {
     loadUser();

@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Review = require('../models/Review');
 const Order = require('../models/Order');
 const Restaurant = require('../models/Restaurant');
@@ -151,7 +152,7 @@ exports.getRestaurantReviews = async (req, res, next) => {
 
     // Calculate rating distribution
     const ratingDistribution = await Review.aggregate([
-      { $match: { restaurant: require('mongoose').Types.ObjectId(req.params.restaurantId) } },
+      { $match: { restaurant: new mongoose.Types.ObjectId(req.params.restaurantId) } },
       {
         $group: {
           _id: '$rating',

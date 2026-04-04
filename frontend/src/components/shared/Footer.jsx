@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
 import { Facebook, Twitter, Instagram, Mail, Phone, MapPin } from 'lucide-react';
+import { useAuthStore } from '../../context/authStore';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
+  const { isAuthenticated, user } = useAuthStore();
 
   return (
     <footer className="bg-gray-900 text-gray-300">
@@ -61,28 +63,44 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* For Business */}
+          {/* For Business — no public admin URLs; dashboards only when signed in */}
           <div>
             <h4 className="text-white font-semibold mb-4">For Business</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link to="/merchant/dashboard" className="hover:text-white transition-colors">
-                  Merchant Dashboard
+                <Link to="/register" className="hover:text-white transition-colors">
+                  Register as restaurant owner
                 </Link>
               </li>
               <li>
-                <Link to="/courier/dashboard" className="hover:text-white transition-colors">
-                  Courier Dashboard
+                <Link to="/register" className="hover:text-white transition-colors">
+                  Register as courier
                 </Link>
               </li>
-              <li>
-                <Link to="/admin/dashboard" className="hover:text-white transition-colors">
-                  Admin Panel
-                </Link>
-              </li>
+              {isAuthenticated && user?.role === 'merchant' && (
+                <li>
+                  <Link to="/merchant/dashboard" className="hover:text-white transition-colors">
+                    Merchant dashboard
+                  </Link>
+                </li>
+              )}
+              {isAuthenticated && user?.role === 'courier' && (
+                <li>
+                  <Link to="/courier/dashboard" className="hover:text-white transition-colors">
+                    Courier dashboard
+                  </Link>
+                </li>
+              )}
+              {isAuthenticated && user?.role === 'admin' && (
+                <li>
+                  <Link to="/admin/dashboard" className="hover:text-white transition-colors">
+                    Admin console
+                  </Link>
+                </li>
+              )}
               <li>
                 <Link to="/pricing" className="hover:text-white transition-colors">
-                  Partner With Us
+                  Partner with us
                 </Link>
               </li>
             </ul>

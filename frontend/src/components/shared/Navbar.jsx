@@ -1,28 +1,29 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, User, LogOut, Store, Truck, Bell } from 'lucide-react';
+import { ShoppingCart, LogOut, Store, MessageCircle, Shield } from 'lucide-react';
 import { useAuthStore } from '../../context/authStore';
 import { useCartStore } from '../../context/cartStore';
-import useNotificationStore from '../../context/notificationStore';
 import Breadcrumb from './Breadcrumb';
 import NotificationBell from './NotificationBell';
 
 const Navbar = () => {
   const { isAuthenticated, user, logout } = useAuthStore();
   const { getItemCount } = useCartStore();
-  const { unreadCount } = useNotificationStore();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/');
   };
 
   const getDashboardLink = () => {
+    if (user?.role === 'admin') return '/admin/dashboard';
     if (user?.role === 'merchant') return '/merchant/dashboard';
     if (user?.role === 'courier') return '/courier/dashboard';
     return '/profile';
   };
+
+  const showCart = user?.role === 'consumer' || user?.role === 'admin';
 
   // Hide navbar on certain pages
   const hideNavbarPages = ['/login', '/register', '/onboarding'];
@@ -49,15 +50,30 @@ const Navbar = () => {
                   {/* Notification Bell */}
                   <NotificationBell />
                   
-                  {/* Cart */}
-                  <Link to="/cart" className="relative">
-                    <ShoppingCart className="h-6 w-6 text-gray-700 hover:text-red-600" />
-                    {getItemCount() > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                        {getItemCount()}
-                      </span>
-                    )}
+                  {showCart && (
+                    <Link to="/cart" className="relative">
+                      <ShoppingCart className="h-6 w-6 text-gray-700 hover:text-red-600" />
+                      {getItemCount() > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                          {getItemCount()}
+                        </span>
+                      )}
+                    </Link>
+                  )}
+
+                  <Link to="/assistant" className="text-gray-700 hover:text-red-600 transition-colors" title="Assistant">
+                    <MessageCircle className="h-6 w-6" />
                   </Link>
+
+                  {user?.role === 'admin' && (
+                    <Link
+                      to="/admin/dashboard"
+                      className="text-gray-700 hover:text-red-600 transition-colors"
+                      title="Admin"
+                    >
+                      <Shield className="h-6 w-6" />
+                    </Link>
+                  )}
 
                   {/* User Menu */}
                   <Link to={getDashboardLink()} className="flex items-center space-x-2">

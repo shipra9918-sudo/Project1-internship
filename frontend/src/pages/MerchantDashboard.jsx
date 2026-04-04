@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Store, Package, DollarSign, TrendingUp, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Package, DollarSign, Clock, CheckCircle } from 'lucide-react';
 import api from '../services/api';
 
 const MerchantDashboard = () => {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [restaurant, setRestaurant] = useState(null);
   const [orders, setOrders] = useState([]);

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Check, X, Zap, Crown, Rocket, Star } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../context/authStore';
 
 const PricingPage = () => {
   const navigate = useNavigate();
@@ -118,7 +119,10 @@ const PricingPage = () => {
       });
 
       toast.success(response.data.message);
-      navigate('/admin/dashboard');
+      const role = useAuthStore.getState().user?.role;
+      if (role === 'admin') navigate('/admin/dashboard');
+      else if (role === 'merchant') navigate('/merchant/dashboard');
+      else navigate('/home');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to subscribe');
     } finally {

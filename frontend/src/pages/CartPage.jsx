@@ -5,7 +5,6 @@ import { useAuthStore } from '../context/authStore';
 
 const CartPage = () => {
   const { items, restaurant, total, updateQuantity, removeItem, clearCart } = useCartStore();
-  const { isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 
   if (items.length === 0) {

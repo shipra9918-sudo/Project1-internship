@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Building2, Users, CreditCard, CheckCircle } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../context/authStore';
 
 const OnboardingPage = () => {
   const navigate = useNavigate();
@@ -58,7 +59,8 @@ const OnboardingPage = () => {
       });
 
       toast.success('Workspace created successfully!');
-      navigate('/admin/dashboard');
+      const role = useAuthStore.getState().user?.role;
+      navigate(role === 'courier' ? '/courier/dashboard' : '/merchant/dashboard');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to complete onboarding');
     } finally {

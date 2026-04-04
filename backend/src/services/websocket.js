@@ -5,6 +5,9 @@ const Order = require('../models/Order');
 
 let io;
 
+// Throttle interval for persisting courier GPS coordinates to the database (ms)
+const LOCATION_DB_WRITE_INTERVAL_MS = 10000; // write at most once every 10 seconds
+
 const initializeWebSocket = (ioInstance) => {
   io = ioInstance;
 
@@ -74,6 +77,9 @@ const initializeWebSocket = (ioInstance) => {
       console.log(`📦 User ${socket.user.name} unsubscribed from order ${orderId}`);
     });
 
+    // Per-socket tracker: last time we persisted this courier's location to the DB
+    socket._lastLocationWriteAt = 0;
+
     // Courier location update (real-time tracking)
     socket.on('updateCourierLocation', async (data) => {
       try {
@@ -83,35 +89,38 @@ const initializeWebSocket = (ioInstance) => {
         }
 
         const { orderId, longitude, latitude } = data;
-        const order = await Order.findById(orderId);
+        const lng = parseFloat(longitude);
+        const lat = parseFloat(latitude);
 
+        // Always broadcast the live position to all order subscribers immediately
+        io.to(`order-${orderId}`).emit('courierLocationUpdate', {
+          orderId,
+          location: { longitude: lng, latitude: lat },
+          timestamp: new Date()
+        });
+
+        // Persist to the database at most once per LOCATION_DB_WRITE_INTERVAL_MS
+        // to avoid hammering MongoDB on every GPS ping (which can arrive every 2-5 s)
+        const now = Date.now();
+        if (now - socket._lastLocationWriteAt < LOCATION_DB_WRITE_INTERVAL_MS) return;
+        socket._lastLocationWriteAt = now;
+
+        const order = await Order.findById(orderId);
         if (!order || order.courier?.toString() !== socket.user.id) {
           socket.emit('error', { message: 'Order not found or not assigned to you' });
           return;
         }
 
-        // Update courier location in order
-        order.courierLocation = {
-          type: 'Point',
-          coordinates: [parseFloat(longitude), parseFloat(latitude)]
-        };
-        await order.save();
+        const geoPoint = { type: 'Point', coordinates: [lng, lat] };
 
-        // Update user's courier profile location
-        socket.user.courierProfile.currentLocation = {
-          type: 'Point',
-          coordinates: [parseFloat(longitude), parseFloat(latitude)]
-        };
-        await socket.user.save();
+        // Use updateOne to avoid loading the full document just for a location field
+        await Order.updateOne({ _id: orderId }, { $set: { courierLocation: geoPoint } });
+        await User.updateOne(
+          { _id: socket.user.id },
+          { $set: { 'courierProfile.currentLocation': geoPoint } }
+        );
 
-        // Broadcast location to all subscribers of this order
-        io.to(`order-${orderId}`).emit('courierLocationUpdate', {
-          orderId,
-          location: { longitude, latitude },
-          timestamp: new Date()
-        });
-
-        console.log(`📍 Courier ${socket.user.name} location updated for order ${orderId}`);
+        console.log(`📍 Courier ${socket.user.name} location persisted for order ${orderId}`);
       } catch (error) {
         socket.emit('error', { message: 'Failed to update location' });
       }
@@ -146,9 +155,16 @@ const initializeWebSocket = (ioInstance) => {
     });
 
     // New order notification for merchants
+    // Only the server-side (via emitNewOrderToMerchant) should trigger this;
+    // guard against any consumer/courier spoofing fake order alerts.
     socket.on('newOrderForRestaurant', (data) => {
+      if (socket.user.role !== 'merchant' && socket.user.role !== 'admin') {
+        socket.emit('error', { message: 'Not authorized to broadcast order events' });
+        return;
+      }
+
       const { restaurantId, orderId } = data;
-      
+
       // Notify all merchants connected to this restaurant
       io.to(`restaurant-${restaurantId}`).emit('newOrder', {
         orderId,

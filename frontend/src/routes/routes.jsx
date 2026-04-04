@@ -16,6 +16,9 @@ import OrderTrackingPage from '../pages/OrderTrackingPage';
 import RestaurantPage from '../pages/RestaurantPage';
 import ProfilePage from '../pages/ProfilePage';
 import BillingSettings from '../pages/BillingSettings';
+import CartPage from '../pages/CartPage';
+import CheckoutPage from '../pages/CheckoutPage';
+import ChatbotPage from '../pages/ChatbotPage';
 import NotFound from '../pages/NotFound';
 
 // Protected Route Component
@@ -23,6 +26,9 @@ import ProtectedRoute from '../components/shared/ProtectedRoute';
 
 // Error Boundary
 import ErrorBoundary from '../components/shared/ErrorBoundary';
+
+/** Logged-in app roles (excludes unauthenticated). Admin uses /admin/* only in nav; may browse app when needed. */
+const ROLES_APP = ['consumer', 'merchant', 'courier', 'admin'];
 
 // Layout component for pages with Navbar, Footer and ScrollToTop
 const withLayout = (Component) => () => (
@@ -45,7 +51,11 @@ export const router = createBrowserRouter([
   },
   {
     path: '/home',
-    element: withLayout(HomePage)(),
+    element: (
+      <ProtectedRoute allowedRoles={ROLES_APP}>
+        {withLayout(HomePage)()}
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/pricing',
@@ -71,17 +81,41 @@ export const router = createBrowserRouter([
   // Consumer Routes
   {
     path: '/restaurants',
-    element: withLayout(HomePage)(),
+    element: (
+      <ProtectedRoute allowedRoles={ROLES_APP}>
+        {withLayout(HomePage)()}
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/restaurant/:id',
-    element: withLayout(RestaurantPage)(),
+    element: (
+      <ProtectedRoute allowedRoles={ROLES_APP}>
+        {withLayout(RestaurantPage)()}
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/orders',
     element: (
       <ProtectedRoute allowedRoles={['consumer']}>
         {withLayout(OrdersPage)()}
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/cart',
+    element: (
+      <ProtectedRoute allowedRoles={['consumer', 'admin']}>
+        {withLayout(CartPage)()}
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/checkout',
+    element: (
+      <ProtectedRoute allowedRoles={['consumer']}>
+        {withLayout(CheckoutPage)()}
       </ProtectedRoute>
     ),
   },
@@ -138,6 +172,14 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         {withLayout(BillingSettings)()}
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/assistant',
+    element: (
+      <ProtectedRoute allowedRoles={ROLES_APP}>
+        {withLayout(ChatbotPage)()}
       </ProtectedRoute>
     ),
   },

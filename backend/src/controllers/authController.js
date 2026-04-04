@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Session = require('../models/Session');
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -6,6 +7,13 @@ const User = require('../models/User');
 exports.register = async (req, res, next) => {
   try {
     const { name, email, password, role, phone, address } = req.body;
+
+    if (role === 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Admin accounts cannot be created through registration'
+      });
+    }
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
@@ -26,8 +34,8 @@ exports.register = async (req, res, next) => {
       address
     });
 
-    // Generate token
-    const token = user.generateAuthToken();
+    const { token, jti, expiresAt } = user.generateAuthToken();
+    await Session.create({ user: user._id, tokenId: jti, expiresAt });
 
     res.status(201).json({
       success: true,
@@ -89,8 +97,8 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    // Generate token
-    const token = user.generateAuthToken();
+    const { token, jti, expiresAt } = user.generateAuthToken();
+    await Session.create({ user: user._id, tokenId: jti, expiresAt });
 
     res.status(200).json({
       success: true,
@@ -106,6 +114,33 @@ exports.login = async (req, res, next) => {
         },
         token
       }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Log out (revoke session in MongoDB)
+// @route   POST /api/auth/logout
+// @access  Private
+exports.logout = async (req, res, next) => {
+  try {
+    const jti = req.auth?.jti;
+    if (!jti) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid session'
+      });
+    }
+
+    await Session.updateOne(
+      { tokenId: jti, revokedAt: null },
+      { revokedAt: new Date() }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Logged out successfully'
     });
   } catch (error) {
     next(error);
@@ -185,7 +220,7 @@ exports.toggleAvailability = async (req, res, next) => {
       });
     }
 
-    user.courierProfile.isAvailable = isAvailable;
+    user.courierProfile.isAvailable = Boolean(isAvailable);
     await user.save();
 
     res.status(200).json({
@@ -203,9 +238,10 @@ exports.toggleAvailability = async (req, res, next) => {
 // @access  Private (Courier only)
 exports.updateCourierLocation = async (req, res, next) => {
   try {
-    const { longitude, latitude } = req.body;
+    const longitude = Number(req.body.longitude);
+    const latitude = Number(req.body.latitude);
 
-    if (!longitude || !latitude) {
+    if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
       return res.status(400).json({
         success: false,
         message: 'Longitude and latitude are required'
@@ -223,7 +259,7 @@ exports.updateCourierLocation = async (req, res, next) => {
 
     user.courierProfile.currentLocation = {
       type: 'Point',
-      coordinates: [parseFloat(longitude), parseFloat(latitude)]
+      coordinates: [longitude, latitude]
     };
 
     await user.save();

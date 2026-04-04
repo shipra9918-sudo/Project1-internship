@@ -10,10 +10,9 @@ const Breadcrumb = ({ routes = [] }) => {
     const pathnames = location.pathname.split('/').filter((x) => x);
     const breadcrumbs = pathnames.map((value, index) => {
       const to = `/${pathnames.slice(0, index + 1).join('/')}`;
-      const label = value.charAt(0).toUpperCase() + value.slice(1).replace(/-/g, ' ');
       
       // Handle dynamic route parameters
-      const cleanLabel = value.replace(/:/g, '').replace(/\d+/g, (match) => `#${match}`);
+      const cleanLabel = value.charAt(0).toUpperCase() + value.slice(1).replace(/-/g, ' ');
       
       return {
         label: cleanLabel,

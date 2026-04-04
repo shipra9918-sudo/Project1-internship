@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../context/authStore';
+import { getPostAuthPath } from '../utils/authRedirect';
 import toast from 'react-hot-toast';
 
 const RegisterPage = () => {
@@ -20,7 +21,8 @@ const RegisterPage = () => {
     
     if (result.success) {
       toast.success('Registration successful!');
-      navigate('/');
+      const user = useAuthStore.getState().user;
+      navigate(getPostAuthPath(user, null));
     } else {
       toast.error(result.error || 'Registration failed');
     }

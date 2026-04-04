@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, MapPin, Star, Clock, Store } from 'lucide-react';
 import { restaurantAPI } from '../services/api';
@@ -8,48 +8,56 @@ const HomePage = () => {
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [locationHint, setLocationHint] = useState('');
   const [filters, setFilters] = useState({
     cuisineType: '',
     minRating: '',
     priceRange: ''
   });
+  const coordsRef = useRef(null);
+  const geoStartedRef = useRef(false);
+  const filtersRef = useRef(filters);
 
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      // Get user's location and fetch nearby restaurants
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            fetchRestaurants(position.coords.longitude, position.coords.latitude);
-          },
-          () => {
-            // Default location if permission denied
-            fetchRestaurants(-74.006, 40.7128); // New York
-          }
-        );
-      }
-    }, 500);
+    filtersRef.current = filters;
+  }, [filters]);
 
-    return () => clearTimeout(delayDebounceFn);
-  }, [filters, searchTerm]);
+  const filterParams = () => {
+    const f = filtersRef.current;
+    const p = { limit: 24 };
+    if (f.cuisineType) p.cuisineType = f.cuisineType;
+    if (f.minRating) p.minRating = f.minRating;
+    if (f.priceRange) p.priceRange = f.priceRange;
+    return p;
+  };
 
-  const fetchRestaurants = async (longitude, latitude) => {
+  const fetchDiscover = async (longitude, latitude) => {
     setLoading(true);
+    setLocationHint('Showing restaurants near your location.');
     try {
-      const apiMethod = searchTerm ? restaurantAPI.search : restaurantAPI.discover;
       const params = {
         longitude,
         latitude,
         maxDistance: 10000,
-        ...filters
+        ...filterParams()
       };
-      
-      if (searchTerm) {
-        params.keyword = searchTerm;
-      }
+      const response = await restaurantAPI.discover(params);
+      setRestaurants(response.data.data.restaurants || []);
+    } catch (error) {
+      toast.error('Failed to load nearby restaurants');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      const response = await apiMethod(params);
-      setRestaurants(response.data.data.restaurants);
+  const fetchBrowse = async () => {
+    setLoading(true);
+    setLocationHint(
+      'Location is off or unavailable — showing featured restaurants. Enable location in your browser for nearby results.'
+    );
+    try {
+      const response = await restaurantAPI.browse(filterParams());
+      setRestaurants(response.data.data.restaurants || []);
     } catch (error) {
       toast.error('Failed to load restaurants');
     } finally {
@@ -57,8 +65,77 @@ const HomePage = () => {
     }
   };
 
+  const fetchSearch = async () => {
+    const q = searchTerm.trim();
+    if (!q) return;
+    setLoading(true);
+    setLocationHint('Search results (not ranked by distance).');
+    try {
+      const response = await restaurantAPI.search({ query: q, limit: 24 });
+      setRestaurants(response.data.data.restaurants || []);
+    } catch (error) {
+      toast.error('Search failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const delay = setTimeout(() => {
+      if (searchTerm.trim()) {
+        fetchSearch();
+        return;
+      }
+
+      if (coordsRef.current === false) {
+        fetchBrowse();
+        return;
+      }
+
+      if (coordsRef.current && typeof coordsRef.current === 'object') {
+        fetchDiscover(coordsRef.current.lng, coordsRef.current.lat);
+        return;
+      }
+
+      if (geoStartedRef.current) {
+        return;
+      }
+
+      geoStartedRef.current = true;
+
+      if (!navigator.geolocation) {
+        coordsRef.current = false;
+        fetchBrowse();
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          coordsRef.current = {
+            lng: position.coords.longitude,
+            lat: position.coords.latitude
+          };
+          fetchDiscover(position.coords.longitude, position.coords.latitude);
+        },
+        () => {
+          coordsRef.current = false;
+          fetchBrowse();
+        },
+        { timeout: 12000, maximumAge: 60000 }
+      );
+    }, 500);
+
+    return () => clearTimeout(delay);
+  }, [filters, searchTerm]);
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
+      {locationHint && (
+        <div className="mb-6 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+          {locationHint}
+        </div>
+      )}
+
       {/* Hero Section */}
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold text-gray-900 mb-4">
@@ -161,21 +238,27 @@ const HomePage = () => {
                 <div className="flex items-center space-x-4 text-sm text-gray-600 mb-2">
                   <div className="flex items-center">
                     <Star className="h-4 w-4 text-yellow-400 fill-current mr-1" />
-                    <span>{restaurant.rating.average.toFixed(1)} ({restaurant.rating.count})</span>
+                    <span>
+                      {(restaurant.rating?.average ?? 0).toFixed(1)} ({restaurant.rating?.count ?? 0})
+                    </span>
                   </div>
                   <div className="flex items-center">
                     <Clock className="h-4 w-4 mr-1" />
-                    <span>{restaurant.estimatedDeliveryTime} min</span>
+                    <span>{restaurant.estimatedDeliveryTime ?? '—'} min</span>
                   </div>
                 </div>
 
                 <div className="flex items-center text-sm text-gray-500 mb-2">
                   <MapPin className="h-4 w-4 mr-1" />
-                  <span>{restaurant.distanceInKm?.toFixed(1)} km away</span>
+                  <span>
+                    {restaurant.distanceInKm != null
+                      ? `${Number(restaurant.distanceInKm).toFixed(1)} km away`
+                      : 'Featured listing'}
+                  </span>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  {restaurant.cuisineType.slice(0, 2).map(cuisine => (
+                  {(restaurant.cuisineType || []).slice(0, 2).map(cuisine => (
                     <span key={cuisine} className="bg-gray-100 px-2 py-1 rounded-full text-xs text-gray-600">
                       {cuisine}
                     </span>
@@ -184,7 +267,7 @@ const HomePage = () => {
 
                 {restaurant.deliveryFee > 0 && (
                   <p className="text-sm text-gray-600 mt-2">
-                    Delivery: ${restaurant.deliveryFee.toFixed(2)}
+                    Delivery: ${Number(restaurant.deliveryFee).toFixed(2)}
                   </p>
                 )}
               </div>
@@ -195,7 +278,7 @@ const HomePage = () => {
 
       {!loading && restaurants.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No restaurants found nearby</p>
+          <p className="text-gray-500 text-lg">No restaurants found</p>
         </div>
       )}
     </div>

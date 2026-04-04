@@ -3,7 +3,8 @@ const router = express.Router();
 const restaurantController = require('../controllers/restaurantController');
 const { protect, authorize } = require('../middleware/auth');
 
-// Public routes
+// Public routes (static paths before /:id)
+router.get('/browse', restaurantController.browseRestaurants);
 router.get('/discover', restaurantController.discoverRestaurants);
 router.get('/search', restaurantController.searchRestaurants);
 router.get('/my-restaurant', protect, authorize('merchant', 'admin'), restaurantController.getMyRestaurant);

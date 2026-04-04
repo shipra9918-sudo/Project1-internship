@@ -195,27 +195,64 @@ restaurantSchema.index({ isActive: 1, isOpen: 1 });
 restaurantSchema.index({ owner: 1 });
 restaurantSchema.index({ name: 'text', description: 'text', tags: 'text' });
 
-// Update rating when new review is added
+// Update rating when a new review is added — uses atomic $inc to avoid race conditions
 restaurantSchema.methods.updateRating = async function(newRating) {
-  const totalRating = (this.rating.average * this.rating.count) + newRating;
-  this.rating.count += 1;
-  this.rating.average = Math.min(5, totalRating / this.rating.count); // Cap at 5.0
-  await this.save();
-  return this.rating;
+  // Atomically increment count and accumulate into a running sum stored alongside average
+  // We recompute the average as: (old_avg * old_count + newRating) / (old_count + 1)
+  // Using findByIdAndUpdate with $inc guarantees no lost-update under concurrent requests.
+  const updated = await this.constructor.findByIdAndUpdate(
+    this._id,
+    [
+      {
+        $set: {
+          'rating.count': { $add: ['$rating.count', 1] },
+          'rating.average': {
+            $min: [
+              5,
+              {
+                $divide: [
+                  { $add: [{ $multiply: ['$rating.average', '$rating.count'] }, newRating] },
+                  { $add: ['$rating.count', 1] }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    ],
+    { new: true }
+  );
+  return updated.rating;
 };
 
-// Check if restaurant is currently open
+// Check if restaurant is currently open based on operating hours (HH:MM strings)
 restaurantSchema.methods.isCurrentlyOpen = function() {
   if (!this.isOpen || !this.isActive) return false;
-  
+
   const now = new Date();
   const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
   const hours = this.operatingHours[dayName];
-  
-  if (!hours || hours.isClosed) return false;
-  
-  // Simplified check - in production, use proper time comparison
-  return true;
+
+  if (!hours || hours.isClosed || !hours.open || !hours.close) return false;
+
+  // Convert current time to total minutes since midnight
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  // Parse "HH:MM" strings into total minutes
+  const parseTime = (str) => {
+    const [h, m] = str.split(':').map(Number);
+    return h * 60 + (m || 0);
+  };
+
+  const openMinutes = parseTime(hours.open);
+  const closeMinutes = parseTime(hours.close);
+
+  // Handle overnight hours (e.g. 22:00 – 02:00)
+  if (closeMinutes < openMinutes) {
+    return currentMinutes >= openMinutes || currentMinutes < closeMinutes;
+  }
+
+  return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
 };
 
 // Toggle menu item availability

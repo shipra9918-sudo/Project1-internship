@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Truck, MapPin, DollarSign, CheckCircle, Clock, Navigation, ToggleLeft, ToggleRight } from 'lucide-react';
 import api from '../services/api';
+import { authAPI } from '../services/api';
 
 const CourierDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -16,6 +17,31 @@ const CourierDashboard = () => {
   useEffect(() => {
     fetchCourierData();
   }, []);
+
+  useEffect(() => {
+    if (!isAvailable || !navigator.geolocation) return undefined;
+
+    const watchId = navigator.geolocation.watchPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          await authAPI.updateCourierLocation({ latitude, longitude });
+        } catch (error) {
+          console.error('Failed to update courier location:', error);
+        }
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 30000,
+        timeout: 15000
+      }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [isAvailable]);
 
   const fetchCourierData = async () => {
     try {
@@ -47,7 +73,7 @@ const CourierDashboard = () => {
 
   const toggleAvailability = async () => {
     try {
-      await api.put('/auth/courier/availability', { isAvailable: !isAvailable });
+      await authAPI.updateCourierAvailability({ isAvailable: !isAvailable });
       setIsAvailable(!isAvailable);
     } catch (error) {
       console.error('Error toggling availability:', error);

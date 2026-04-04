@@ -6,15 +6,17 @@ const { protect, authorize } = require('../middleware/auth');
 // Consumer routes
 router.post('/', protect, orderController.createOrder);
 router.get('/my-orders', protect, orderController.getMyOrders);
-router.get('/:id', protect, orderController.getOrder);
 
 // Merchant routes
 router.get('/merchant-orders', protect, authorize('merchant', 'admin'), orderController.getMerchantOrders);
 router.get('/restaurant/:restaurantId', protect, authorize('merchant', 'admin'), orderController.getRestaurantOrders);
-router.put('/:id/status', protect, authorize('merchant', 'courier', 'admin'), orderController.updateOrderStatus);
 
 // Courier routes
 router.get('/courier-deliveries', protect, authorize('courier', 'admin'), orderController.getCourierDeliveries);
+
+// ID routes must stay after static routes
+router.get('/:id', protect, orderController.getOrder);
+router.put('/:id/status', protect, authorize('merchant', 'courier', 'admin'), orderController.updateOrderStatus);
 router.put('/:id/accept-delivery', protect, authorize('courier', 'admin'), orderController.acceptDelivery);
 router.put('/:id/complete-delivery', protect, authorize('courier', 'admin'), orderController.completeDelivery);
 

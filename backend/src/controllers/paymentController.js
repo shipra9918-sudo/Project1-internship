@@ -60,18 +60,17 @@ exports.processCheckout = async (req, res, next) => {
       });
     }
 
-    // Payment successful
+    // Payment successful — set all fields and save once
+    const pointsEarned = Math.floor(order.pricing.total * 0.1); // 10% of order value
     order.payment.status = 'completed';
     order.payment.transactionId = paymentResult.transactionId;
     order.payment.paidAt = new Date();
     order.status = 'accepted';
-    await order.save();
-
-    // Calculate and award loyalty points
-    const pointsEarned = Math.floor(order.pricing.total * 0.1); // 10% of order value
-    await req.user.addLoyaltyPoints(pointsEarned);
     order.loyaltyPointsEarned = pointsEarned;
     await order.save();
+
+    // Award loyalty points to the user (separate collection, must still be its own write)
+    await req.user.addLoyaltyPoints(pointsEarned);
 
     // Update restaurant stats
     order.restaurant.totalOrders += 1;

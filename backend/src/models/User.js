@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -129,13 +130,17 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Generate JWT token
+// Generate JWT + stable session id (jti) stored in MongoDB Session
 userSchema.methods.generateAuthToken = function() {
-  return jwt.sign(
-    { id: this._id, role: this.role },
+  const jti = crypto.randomUUID();
+  const token = jwt.sign(
+    { id: this._id, role: this.role, jti },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRE }
+    { expiresIn: process.env.JWT_EXPIRE || '7d' }
   );
+  const decoded = jwt.decode(token);
+  const expiresAt = new Date(decoded.exp * 1000);
+  return { token, jti, expiresAt };
 };
 
 // Add loyalty points

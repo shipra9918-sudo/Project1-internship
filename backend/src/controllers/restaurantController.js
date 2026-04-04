@@ -1,5 +1,63 @@
 const Restaurant = require('../models/Restaurant');
 
+// @desc    List restaurants without geolocation (fallback when GPS denied / unavailable)
+// @route   GET /api/restaurants/browse
+// @access  Public
+exports.browseRestaurants = async (req, res, next) => {
+  try {
+    const {
+      cuisineType,
+      minRating,
+      priceRange,
+      limit = 24,
+      page = 1
+    } = req.query;
+
+    const query = { isActive: true };
+    if (cuisineType) {
+      query.cuisineType = { $in: Array.isArray(cuisineType) ? cuisineType : [cuisineType] };
+    }
+    if (minRating) {
+      query['rating.average'] = { $gte: parseFloat(minRating) };
+    }
+    if (priceRange) {
+      query.priceRange = { $in: Array.isArray(priceRange) ? priceRange : [priceRange] };
+    }
+
+    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    const restaurants = await Restaurant.find(query)
+      .sort({ 'rating.average': -1, createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit, 10))
+      .select(
+        'name cuisineType rating address coverImage priceRange estimatedDeliveryTime deliveryFee minimumOrder features isOpen'
+      );
+
+    const total = await Restaurant.countDocuments(query);
+
+    const shaped = restaurants.map((r) => {
+      const doc = r.toObject();
+      return {
+        ...doc,
+        distanceInKm: null,
+        browseMode: true
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      browseMode: true,
+      count: shaped.length,
+      total,
+      page: parseInt(page, 10),
+      pages: Math.ceil(total / parseInt(limit, 10)),
+      data: { restaurants: shaped }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Discover nearby restaurants with geospatial search
 // @route   GET /api/restaurants/discover
 // @access  Public

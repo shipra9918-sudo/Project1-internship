@@ -160,7 +160,7 @@ exports.getOrder = async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id)
       .populate('customer', 'name email phone')
-      .populate('restaurant', 'name address phone')
+      .populate('restaurant', 'name address phone owner')
       .populate('courier', 'name phone courierProfile.vehicleType');
 
     if (!order) {
@@ -248,7 +248,6 @@ exports.acceptDelivery = async (req, res, next) => {
     }
 
     order.courier = req.user.id;
-    order.status = 'dispatched';
     await order.updateStatus('dispatched', `Courier ${req.user.name} accepted delivery`);
 
     res.status(200).json({
@@ -282,8 +281,6 @@ exports.completeDelivery = async (req, res, next) => {
       });
     }
 
-    order.status = 'delivered';
-    order.actualDeliveryTime = new Date();
     await order.updateStatus('delivered', 'Order delivered successfully');
 
     // Update courier stats

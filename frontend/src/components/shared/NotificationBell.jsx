@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, Check, Trash2 } from 'lucide-react';
+import { Bell, Check } from 'lucide-react';
 import useNotificationStore from '../../context/notificationStore';
 
 const NotificationBell = () => {

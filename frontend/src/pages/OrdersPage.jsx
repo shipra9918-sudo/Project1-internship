@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, Clock, CheckCircle, DollarSign, ChevronRight } from 'lucide-react';
+import { Package, Clock, CheckCircle, DollarSign, ChevronRight, Truck } from 'lucide-react';
 import api from '../services/api';
 
 const OrdersPage = () => {
