@@ -3,6 +3,23 @@ const Restaurant = require('../models/Restaurant');
 // @desc    Discover nearby restaurants with geospatial search
 // @route   GET /api/restaurants/discover
 // @access  Public
+exports.createRestaurant = async (req, res) => {
+  try {
+    const restaurant = await Restaurant.create({
+      ...req.body,
+      owner: req.user.id // 🔥 required
+    });
+
+    res.status(201).json({
+      success: true,
+      data: restaurant
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error creating restaurant" });
+  }
+};
 exports.discoverRestaurants = async (req, res, next) => {
   try {
     const {
