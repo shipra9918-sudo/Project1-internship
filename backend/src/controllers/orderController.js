@@ -414,7 +414,7 @@ exports.getMerchantOrders = async (req, res, next) => {
 
 // @desc    Get restaurant orders
 // @route   GET /api/orders/restaurant/:restaurantId
-// @access  Private
+
 exports.getRestaurantOrders = async (req, res, next) => {
   try {
     const { status, startDate, endDate, limit = 50, page = 1 } = req.query;
