@@ -14,7 +14,6 @@ const BillingSettings = () => {
   }, []);
 
 
-  
   const fetchBillingData = async () => {
     try {
       setLoading(true);
