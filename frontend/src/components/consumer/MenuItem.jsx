@@ -92,6 +92,7 @@ const MenuItem = ({ item, restaurantId, restaurantName }) => {
           </div>
         )}
 
+
         {/* Quantity Controls */}
         {quantity > 0 ? (
           <div className="flex items-center justify-between bg-blue-50 rounded-lg p-2">
