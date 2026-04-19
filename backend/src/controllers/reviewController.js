@@ -12,7 +12,7 @@ exports.createReview = async (req, res, next) => {
   try {
     const { orderId, rating, reviewText, foodRating, serviceRating, deliveryRating, images, keywords } = req.body;
 
-    // Find order
+    // First find the order
     const order = await Order.findById(orderId);
 
     if (!order) {
